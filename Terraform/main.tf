@@ -63,6 +63,20 @@ resource "azurerm_network_security_rule" "example" {
   network_security_group_name = azurerm_network_security_group.example.name
 }
 
+resource "azurerm_network_security_rule" "allow_http" {
+  name                        = "allow-http"
+  resource_group_name         = azurerm_resource_group.demo-RG.name
+  network_security_group_name = azurerm_network_security_group.example.name
+  priority                    = 1002
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "80"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+}
+
 resource "azurerm_network_interface_security_group_association" "association" {
   network_interface_id      = azurerm_network_interface.example.id
   network_security_group_id = azurerm_network_security_group.example.id
@@ -88,24 +102,27 @@ resource "azurerm_virtual_machine" "example" {
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = var.os_disk_type
-   }
-#   provisioner "remote-exec" {
-#   inline = [
-#     "sudo apt-get update",
-#     "sudo apt-get install -y apache2",
-#   ]
-# }
-# connection {
-#       type        = "ssh"
-#       host        = self.public_ip
-#       user        = var.admin_username
-#       private_key = file("/root/.ssh/id_rsa.pub")
-#       timeout     = "4m"
-#    }
-# provisioner "file" {
-#   source      = "files/example.txt"
-#   destination = "/var/www/html/example.txt"
-# }
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt-get update",
+      "sudo apt-get install -y apache2",
+     # "sudo systemctl status apache2",
+     # "sudo systemctl restart apache2",
+    ]
+  }
+  connection {
+    # type        = "ssh"
+    host     = azurerm_public_ip.example.ip_address
+    user     = var.admin_username
+    password = var.admin_password
+    # private_key = file("/root/.ssh/id_rsa.pub")
+    # timeout     = "4m"
+  }
+  # provisioner "file" {
+  #   source      = "files/example.txt"
+  #   destination = "/var/www/html/example.txt"
+  # }
   os_profile {
     computer_name  = var.vm_name
     admin_username = var.admin_username
@@ -115,8 +132,9 @@ resource "azurerm_virtual_machine" "example" {
   os_profile_linux_config {
     disable_password_authentication = false
   }
-# admin_ssh_key {
-#     username   = var.admin_username
-#     public_key = file("~/.ssh/id_rsa.pub")
+  # admin_ssh_key {
+  #     username   = var.admin_username
+  #     public_key = file("~/.ssh/id_rsa.pub")
   # }
 }
+
